@@ -70,8 +70,13 @@ module Koudoku::Subscription
               customer_attributes = {
                 description: subscription_owner_description,
                 email: subscription_owner_email,
-                card: credit_card_token # obtained with Stripe.js
+                plan: plan.stripe_id,
+                source: credit_card_token # obtained with Stripe.js
               }
+
+              if plan.price > 0.0 and credit_card_token.present?
+                customer_attributes[:card] = credit_card_token # obtained with Stripe.js
+              end
 
               # If the class we're being included in supports coupons ..
               if respond_to? :coupon
@@ -79,8 +84,8 @@ module Koudoku::Subscription
                   customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
                 end
               end
-              
-              customer_attributes[:coupon] = @coupon_code if @coupon_code 
+
+              customer_attributes[:coupon] = @coupon_code if @coupon_code
 
               # create a customer at that package level.
               customer = Stripe::Customer.create(customer_attributes)
@@ -96,7 +101,7 @@ module Koudoku::Subscription
 
             # store the customer id.
             self.stripe_id = customer.id
-            self.last_four = customer.cards.retrieve(customer.default_card).last4
+            self.last_four = customer.sources.retrieve(customer.default_source).last4 if customer.sources.count > 0
 
             finalize_new_subscription!
             finalize_upgrade!
@@ -123,11 +128,11 @@ module Koudoku::Subscription
 
         # fetch the customer.
         customer = Stripe::Customer.retrieve(self.stripe_id)
-        customer.card = self.credit_card_token
+        customer.source = self.credit_card_token
         customer.save
 
         # update the last four based on this new card.
-        self.last_four = customer.cards.retrieve(customer.default_card).last4
+        self.last_four = customer.sources.retrieve(customer.default_source).last4
         finalize_card_update!
 
       end

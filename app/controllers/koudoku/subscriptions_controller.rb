@@ -17,13 +17,13 @@ module Koudoku
     def load_owner
       unless params[:owner_id].nil?
         if current_owner.present?
-          
+
           # we need to try and look this owner up via the find method so that we're
           # taking advantage of any override of the find method that would be provided
           # by older versions of friendly_id. (support for newer versions default behavior
           # below.)
           searched_owner = current_owner.class.find(params[:owner_id]) rescue nil
-          
+
           # if we couldn't find them that way, check whether there is a new version of
           # friendly_id in place that we can use to look them up by their slug.
           # in christoph's words, "why?!" in my words, "warum?!!!"
@@ -31,7 +31,7 @@ module Koudoku
           if searched_owner.nil? && current_owner.class.respond_to?(:friendly)
             searched_owner = current_owner.class.friendly.find(params[:owner_id]) rescue nil
           end
-          
+
           if current_owner.try(:id) == searched_owner.try(:id)
             @owner = current_owner
           else
@@ -62,7 +62,7 @@ module Koudoku
 
     def redirect_to_sign_up
       # this is a Devise default variable and thus should not change its name
-      # when we change subscription owners from :user to :company 
+      # when we change subscription owners from :user to :company
       session["user_return_to"] = new_subscription_path(plan: params[:plan])
       redirect_to new_registration_path(Koudoku.subscriptions_owned_by.to_s)
     end
@@ -76,7 +76,7 @@ module Koudoku
 
       # Load all plans.
       @plans = ::Plan.order(:display_order).all
-      
+
       # Don't prep a subscription unless a user is authenticated.
       unless no_owner?
         # we should also set the owner of the subscription here.
@@ -93,11 +93,25 @@ module Koudoku
 
           # by default these methods support devise.
           if current_owner
-            redirect_to new_owner_subscription_path(current_owner, plan: params[:plan])
+            @plan = ::Plan.find(params[:plan])
+            if @plan.name.downcase == "free"
+              @owner = current_owner
+              @subscription = ::Subscription.new(plan_id: params[:plan])
+              @subscription.subscription_owner = @owner
+
+              if @subscription.save
+                flash[:notice] = after_new_subscription_message
+                redirect_to after_new_subscription_path
+              else
+                flash[:error] = 'There was a problem processing this transaction.'
+                render :new
+              end
+            else
+              redirect_to new_owner_subscription_path(current_owner, plan: params[:plan])
+            end
           else
             redirect_to_sign_up
           end
-          
         else
           raise I18n.t('koudoku.failure.feature_depends_on_devise')
         end
@@ -118,10 +132,10 @@ module Koudoku
       @subscription = ::Subscription.new(subscription_params)
       @subscription.subscription_owner = @owner
       @subscription.coupon_code = session[:koudoku_coupon_code]
-      
+
       if @subscription.save
         flash[:notice] = after_new_subscription_message
-        redirect_to after_new_subscription_path 
+        redirect_to after_new_subscription_path
       else
         flash[:error] = I18n.t('koudoku.failure.problem_processing_transaction')
         render :new
@@ -142,18 +156,24 @@ module Koudoku
     end
 
     def update
-      if @subscription.update_attributes(subscription_params)
-        flash[:notice] = I18n.t('koudoku.confirmations.subscription_updated')
-        redirect_to owner_subscription_path(@owner, @subscription)
+      @current_plan = ::Plan.find(params[:subscription][:plan_id])
+      if @subscription.last_four.nil? && @current_plan.name.downcase != "free"
+        flash[:notice] = "Please update card information to proceed"
+        redirect_to edit_owner_subscription_path(@owner, @subscription, update: 'card')
       else
-        flash[:error] = I18n.t('koudoku.failure.problem_processing_transaction')
-        render :edit
+        if @subscription.update_attributes(subscription_params)
+          flash[:notice] = I18n.t('koudoku.confirmations.subscription_updated') #You've successfully updated your subscription.
+          redirect_to owner_subscription_path(@owner, @subscription)
+        else
+          flash[:error] = I18n.t('koudoku.failure.problem_processing_transaction') #'There was a problem processing this transaction.'
+          render :edit
+        end
       end
     end
 
     private
     def subscription_params
-      
+
       # If strong_parameters is around, use that.
       if defined?(ActionController::StrongParameters)
         params.require(:subscription).permit(:plan_id, :stripe_id, :current_price, :credit_card_token, :card_type, :last_four)
@@ -163,15 +183,15 @@ module Koudoku
       end
 
     end
-    
+
     def after_new_subscription_path
       return super(@owner, @subscription) if defined?(super)
       owner_subscription_path(@owner, @subscription)
     end
-    
+
     def after_new_subscription_message
       controller = ::ApplicationController.new
-      controller.respond_to?(:new_subscription_notice_message) ? 
+      controller.respond_to?(:new_subscription_notice_message) ?
           controller.try(:new_subscription_notice_message) :
           I18n.t('koudoku.confirmations.subscription_upgraded')
     end
