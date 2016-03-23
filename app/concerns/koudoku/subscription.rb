@@ -104,8 +104,9 @@ module Koudoku::Subscription
           end
         end
         finalize_plan_change!
+      end
       # if they're updating their credit card details.
-      elsif self.credit_card_token.present?
+      if self.credit_card_token.present?
         Rails.logger.info "\n\n >>> 2. Inside Concern::Subscription | self.credit_card_token.present? : #{self.credit_card_token.present?}"
         prepare_for_card_update
         # fetch the customer.
