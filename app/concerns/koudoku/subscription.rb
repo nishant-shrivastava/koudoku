@@ -17,13 +17,16 @@ module Koudoku::Subscription
 
       # if their package level has changed ..
       if changing_plans?
+        Rails.logger.info "\n\n >>> 1. Inside Concern::Subscription | changing_plans? : #{changing_plans?}"
         prepare_for_plan_change
         # and a customer exists in stripe ..
         if stripe_id.present?
+          Rails.logger.info "\n\n >>> 1.0.1 Inside Concern::Subscription | stripe_id.present? : #{stripe_id.present?}"
           # fetch the customer.
           customer = Stripe::Customer.retrieve(self.stripe_id)
           # if a new plan has been selected
           if self.plan.present?
+            Rails.logger.info "\n\n >>> 1.0.1.1 Inside Concern::Subscription | self.plan.present? : #{stripe_id.present?}"
             # Record the new plan pricing.
             self.current_price = self.plan.price
 
@@ -37,6 +40,7 @@ module Koudoku::Subscription
             finalize_upgrade! if upgrading?
           # if no plan has been selected.
           else
+            Rails.logger.info "\n\n >>> 1.0.1.0 Inside Concern::Subscription | Inside Else | Customer.cancel_subscription"
             prepare_for_cancelation
             # Remove the current pricing.
             self.current_price = nil
@@ -48,6 +52,7 @@ module Koudoku::Subscription
         else
           # if a new plan has been selected
           if self.plan.present?
+            Rails.logger.info "\n\n >>> 1.1.1 Inside Concern::Subscription | self.plan.present? : #{self.plan.present?}"
             # Record the new plan pricing.
             self.current_price = self.plan.price
 
@@ -60,6 +65,7 @@ module Koudoku::Subscription
                 plan: plan.stripe_id,
                 source: credit_card_token # obtained with Stripe.js
               }
+              Rails.logger.info "\n\n >>> 1.1.1.1 Inside Concern::Subscription | customer_attributes : #{customer_attributes}"
 
               if plan.price > 0.0 and credit_card_token.present?
                 customer_attributes[:card] = credit_card_token # obtained with Stripe.js
@@ -90,6 +96,7 @@ module Koudoku::Subscription
             finalize_new_subscription!
             finalize_upgrade!
           else
+            Rails.logger.info "\n\n >>> 1.1.0 Inside Concern::Subscription | Inside Else | Setting Plan to Basic, if nothing is present."
             # This should never happen.
             self.plan_id = ::Plan.basic.id
             # Remove any plan pricing.
@@ -99,6 +106,7 @@ module Koudoku::Subscription
         finalize_plan_change!
       # if they're updating their credit card details.
       elsif self.credit_card_token.present?
+        Rails.logger.info "\n\n >>> 2. Inside Concern::Subscription | self.credit_card_token.present? : #{self.credit_card_token.present?}"
         prepare_for_card_update
         # fetch the customer.
         customer = Stripe::Customer.retrieve(self.stripe_id)
