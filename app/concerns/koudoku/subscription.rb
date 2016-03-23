@@ -13,20 +13,17 @@ module Koudoku::Subscription
     before_save :processing!
     def processing!
 
+      Rails.logger.info "\n\n>>>> Inside processing! | self.credit_card_token : #{self.credit_card_token} | self.credit_card_token.present? : #{self.credit_card_token.present?}"
+
       # if their package level has changed ..
       if changing_plans?
-
         prepare_for_plan_change
-
         # and a customer exists in stripe ..
         if stripe_id.present?
-
           # fetch the customer.
           customer = Stripe::Customer.retrieve(self.stripe_id)
-
           # if a new plan has been selected
           if self.plan.present?
-
             # Record the new plan pricing.
             self.current_price = self.plan.price
 
@@ -38,35 +35,25 @@ module Koudoku::Subscription
 
             finalize_downgrade! if downgrading?
             finalize_upgrade! if upgrading?
-
           # if no plan has been selected.
           else
-
             prepare_for_cancelation
-
             # Remove the current pricing.
             self.current_price = nil
-
             # delete the subscription.
             customer.cancel_subscription
-
             finalize_cancelation!
-
           end
-
         # when customer DOES NOT exist in stripe ..
         else
           # if a new plan has been selected
           if self.plan.present?
-
             # Record the new plan pricing.
             self.current_price = self.plan.price
 
             prepare_for_new_subscription
             prepare_for_upgrade
-
             begin
-
               customer_attributes = {
                 description: subscription_owner_description,
                 email: subscription_owner_email,
@@ -76,8 +63,8 @@ module Koudoku::Subscription
 
               if plan.price > 0.0 and credit_card_token.present?
                 customer_attributes[:card] = credit_card_token # obtained with Stripe.js
+                Rails.logger.info ">>>> Inside Concern::Subscription | credit_card_token : #{credit_card_token}"
               end
-
               # If the class we're being included in supports coupons ..
               if respond_to? :coupon
                 if coupon.present? and coupon.free_trial?
@@ -86,59 +73,45 @@ module Koudoku::Subscription
               end
 
               customer_attributes[:coupon] = @coupon_code if @coupon_code
-
               # create a customer at that package level.
               customer = Stripe::Customer.create(customer_attributes)
 
               finalize_new_customer!(customer.id, plan.price)
               customer.update_subscription(:plan => self.plan.stripe_id, :prorate => Koudoku.prorate)
-
             rescue Stripe::CardError => card_error
               errors[:base] << card_error.message
               card_was_declined
               return false
             end
-
             # store the customer id.
             self.stripe_id = customer.id
             self.last_four = customer.sources.retrieve(customer.default_source).last4 if customer.sources.count > 0
 
             finalize_new_subscription!
             finalize_upgrade!
-
           else
-
             # This should never happen.
-
-            self.plan_id = nil
-
+            self.plan_id = ::Plan.basic.id
             # Remove any plan pricing.
-            self.current_price = nil
-
+            self.current_price = ::Plan.basic.price
           end
-
         end
-
         finalize_plan_change!
-
       # if they're updating their credit card details.
       elsif self.credit_card_token.present?
-
         prepare_for_card_update
-
         # fetch the customer.
         customer = Stripe::Customer.retrieve(self.stripe_id)
         customer.source = self.credit_card_token
         customer.save
 
+        Rails.logger.info "\n\n >>>> Inside self.credit_card_token.present? | customer (from Stripe) : #{customer} | Source (credit_card_token) : #{customer.source}"
+
         # update the last four based on this new card.
         self.last_four = customer.sources.retrieve(customer.default_source).last4
         finalize_card_update!
-
       end
-
     end
-
   end
 
   def describe_difference(plan_to_describe)
@@ -253,5 +226,4 @@ module Koudoku::Subscription
 
   def charge_disputed
   end
-
 end

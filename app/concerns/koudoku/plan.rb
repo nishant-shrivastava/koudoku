@@ -4,5 +4,4 @@ module Koudoku::Plan
   def is_upgrade_from?(plan)
     (price || 0) >= (plan.price || 0)
   end
-
 end
