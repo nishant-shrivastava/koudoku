@@ -111,10 +111,10 @@ module Koudoku::Subscription
         prepare_for_card_update
         # fetch the customer.
         customer = Stripe::Customer.retrieve(self.stripe_id)
-        customer.source = self.credit_card_token
+        Rails.logger.info "\n\n >>>> Inside self.credit_card_token.present? | customer (from Stripe) : #{customer}"
+        customer.card = self.credit_card_token
         customer.save
 
-        Rails.logger.info "\n\n >>>> Inside self.credit_card_token.present? | customer (from Stripe) : #{customer} | Source (credit_card_token) : #{customer.source}"
 
         # update the last four based on this new card.
         self.last_four = customer.sources.retrieve(customer.default_source).last4
