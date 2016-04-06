@@ -34,7 +34,15 @@ module Koudoku::Subscription
             prepare_for_upgrade if upgrading?
 
             # update the package level with stripe.
-            customer.update_subscription(:plan => self.plan.stripe_id, :prorate => Koudoku.prorate)
+            # Commented on 6 April'16 for resolving API UPDATE issues.
+            # customer.update_subscription(:plan => self.plan.stripe_id, :prorate => Koudoku.prorate)
+            if customer.subscriptions && customer.subscriptions.first
+              subscription = customer.subscriptions.first
+              subscription.plan = self.plan.stripe_id
+              if subscription.save
+                Rails.logger.info "\n\n >>>> 1.0.1.0.1 Inside Plan Upgrade/Downgrade | Subscription switched to : #{subscription}"
+              end
+            end
 
             finalize_downgrade! if downgrading?
             finalize_upgrade! if upgrading?
@@ -45,7 +53,15 @@ module Koudoku::Subscription
             # Remove the current pricing.
             self.current_price = nil
             # delete the subscription.
-            customer.cancel_subscription
+            # Commented on 6 April'16 for resolving API UPDATE issues.
+            # customer.cancel_subscription
+            if customer.subscriptions && customer.subscriptions.first
+              subscription = customer.subscriptions.first
+              subscription.plan = ::Plan.basic.stripe_id
+              if subscription.save
+                Rails.logger.info "\n\n >>>> 1.0.1.0.2 Inside Plan Cancellation | Subscription switched back to Basic"
+              end
+            end
             finalize_cancelation!
           end
         # when customer DOES NOT exist in stripe ..
