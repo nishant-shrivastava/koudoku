@@ -24,6 +24,24 @@ module Koudoku::Subscription
           Rails.logger.info "\n\n >>> 1.0.1 Inside Concern::Subscription | stripe_id.present? : #{stripe_id.present?}"
           # fetch the customer.
           customer = Stripe::Customer.retrieve(self.stripe_id)
+
+          #check if customer has Credit card attached on Stripe
+          Rails.logger.info "\n\n >>> 1.0.1.1 Checking self.credit_card_token present | self.credit_card_token : #{self.credit_card_token}"
+          if customer && self.credit_card_token.present?
+            Rails.logger.info "\n\n >>> 1.0.1.1 Checking self.credit_card_token present | self.credit_card_token : #{self.credit_card_token}"
+            if customer.sources &&
+              # Card found, Updating first
+              source = customer.sources.first
+              Rails.logger.info "\n\n >>> 1.0.1.1.0 Inside CardCheck IF | Found Already present card | source : #{source}"
+              source.source = self.credit_card_token
+            else
+              # No card found, Creating One
+              source = customer.sources.create({source: self.credit_card_token})
+              Rails.logger.info "\n\n >>> 1.0.1.1.0 Inside CardCheck ELSE | CREATING / Attaching new card | source : #{source}"
+            end
+            source.save
+          end
+
           # if a new plan has been selected
           if self.plan.present?
             Rails.logger.info "\n\n >>> 1.0.1.1 Inside Concern::Subscription | self.plan.present? : #{stripe_id.present?}"
@@ -120,12 +138,11 @@ module Koudoku::Subscription
           end
         end
         finalize_plan_change!
-      end
+      elsif self.credit_card_token.present?
+        # if they're updating their credit card details.
+        # @TODO : Also check whether the User has the same card details as before.
+        # Check with stripe, rather than in DB.
 
-      # if they're updating their credit card details.
-      # @TODO : Also check whether the User has the same card details as before.
-      # Check with stripe, rather than in DB.
-      if self.credit_card_token.present?
         Rails.logger.info "\n\n >>> 2. Inside Concern::Subscription | self.credit_card_token.present? : #{self.credit_card_token.present?}"
         prepare_for_card_update
         # fetch the customer.
