@@ -108,7 +108,17 @@ module Koudoku::Subscription
               # If the class we're being included in supports coupons ..
               if respond_to? :coupon
                 if coupon.present? and coupon.free_trial?
-                  customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
+                  # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
+                  Rails.logger.info ">>>> Inside Concern::Subscription | coupon Found : #{coupon}"
+                  stripe_coupon_check = Stripe::Coupon.retrieve(coupon.code)
+                  if stripe_coupon_check
+                    customer_attributes[:discount] = {
+                      object: 'discount',
+                      coupon: stripe_coupon_check
+                    }
+                  else
+                    Rails.logger.info ">>>> Inside Concern::Subscription | coupon NOT Found :("
+                  end
                 end
               end
 
