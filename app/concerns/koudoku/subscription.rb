@@ -60,7 +60,7 @@ module Koudoku::Subscription
                 if respond_to? :coupon
                   Rails.logger.info ">>>> [1.0] Inside Concern::Subscription | respond_to? :coupon : #{respond_to? :coupon}"
                   if coupon.present?
-                    Rails.logger.info ">>>> [1.0] Inside Concern::Subscription | coupon Found : #{coupon}"
+                    Rails.logger.info ">>>> [1.0] Inside Concern::Subscription | coupon Found : #{coupon.inspect}"
                     # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
                     stripe_coupon_check = Stripe::Coupon.retrieve(coupon.code)
                     if stripe_coupon_check
@@ -68,7 +68,7 @@ module Koudoku::Subscription
                         object: 'discount',
                         coupon: stripe_coupon_check
                       }
-                      Rails.logger.info ">>>> [1.1] Inside Concern::Subscription | coupon Found : #{coupon} | \n customer_attributes : #{customer_attributes}"
+                      Rails.logger.info ">>>> [1.1] Inside Concern::Subscription | coupon Found : #{coupon} | \n subscription : #{subscription}"
                     else
                       Rails.logger.info ">>>> [1.2] Inside Concern::Subscription | coupon NOT Found :("
                     end
@@ -125,6 +125,12 @@ module Koudoku::Subscription
                 customer_attributes[:card] = credit_card_token # obtained with Stripe.js
                 Rails.logger.info ">>>> Inside Concern::Subscription | credit_card_token : #{credit_card_token}"
               end
+
+              # create a customer at that package level.
+              customer = Stripe::Customer.create(customer_attributes)
+
+              finalize_new_customer!(customer.id, plan.price)
+
               # If the class we're being included in supports coupons ..
               if respond_to? :coupon
                 Rails.logger.info ">>>> [2.0] Inside Concern::Subscription | respond_to? :coupon : #{respond_to? :coupon}"
@@ -133,23 +139,23 @@ module Koudoku::Subscription
                   # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
                   stripe_coupon_check = Stripe::Coupon.retrieve(coupon.code)
                   if stripe_coupon_check
-                    customer_attributes[:discount] = {
+                    subscription_attr[:discount] = {
                       object: 'discount',
                       coupon: stripe_coupon_check
                     }
-                    Rails.logger.info ">>>> [2.1] Inside Concern::Subscription | coupon Found : #{coupon} | \n customer_attributes : #{customer_attributes}"
+                    Rails.logger.info ">>>> [2.1] Inside Concern::Subscription | coupon Found : #{coupon} | \n subscription_attr : #{subscription_attr}"
                   else
                     Rails.logger.info ">>>> [2.2] Inside Concern::Subscription | coupon NOT Found :("
                   end
                 end
               end
-
               customer_attributes[:coupon] = @coupon_code if @coupon_code
-              # create a customer at that package level.
-              customer = Stripe::Customer.create(customer_attributes)
 
-              finalize_new_customer!(customer.id, plan.price)
-              customer.update_subscription(:plan => self.plan.stripe_id, :prorate => Koudoku.prorate)
+              if subscription_attr && !subscription_attr.blank?
+                customer.update_subscription(subscription_attr.merge({:plan => self.plan.stripe_id, :prorate => Koudoku.prorate}))
+              else
+                customer.update_subscription(:plan => self.plan.stripe_id, :prorate => Koudoku.prorate)
+              end
             rescue Stripe::CardError => card_error
               errors[:base] << card_error.message
               card_was_declined
