@@ -58,6 +58,7 @@ module Koudoku::Subscription
               subscription = customer.subscriptions.first
               if upgrading?
                 if respond_to? :coupon
+                  Rails.logger.info ">>>> [1.0] Inside Concern::Subscription | respond_to? :coupon : #{respond_to? :coupon}"
                   if coupon.present?
                     Rails.logger.info ">>>> [1.0] Inside Concern::Subscription | coupon Found : #{coupon}"
                     # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
@@ -126,6 +127,7 @@ module Koudoku::Subscription
               end
               # If the class we're being included in supports coupons ..
               if respond_to? :coupon
+                Rails.logger.info ">>>> [2.0] Inside Concern::Subscription | respond_to? :coupon : #{respond_to? :coupon}"
                 if coupon.present?
                   Rails.logger.info ">>>> [2.0] Inside Concern::Subscription | coupon Found : #{coupon}"
                   # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
