@@ -56,6 +56,23 @@ module Koudoku::Subscription
             # customer.update_subscription(:plan => self.plan.stripe_id, :prorate => Koudoku.prorate)
             if customer.subscriptions && customer.subscriptions.first
               subscription = customer.subscriptions.first
+              if upgrading? && respond_to? :coupon
+                if coupon.present?
+                  Rails.logger.info ">>>> [1.0] Inside Concern::Subscription | coupon Found : #{coupon}"
+                  # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
+                  stripe_coupon_check = Stripe::Coupon.retrieve(coupon.code)
+                  if stripe_coupon_check
+                    subscription.discount = {
+                      object: 'discount',
+                      coupon: stripe_coupon_check
+                    }
+                    Rails.logger.info ">>>> [1.1] Inside Concern::Subscription | coupon Found : #{coupon} | \n customer_attributes : #{customer_attributes}"
+                  else
+                    Rails.logger.info ">>>> [1.2] Inside Concern::Subscription | coupon NOT Found :("
+                  end
+                end
+              end
+
               subscription.plan = self.plan.stripe_id
               if subscription.save
                 Rails.logger.info "\n\n >>>> 1.0.1.0.1 Inside Plan Upgrade/Downgrade | Subscription switched to : #{subscription}"
@@ -107,7 +124,8 @@ module Koudoku::Subscription
               end
               # If the class we're being included in supports coupons ..
               if respond_to? :coupon
-                if coupon.present? and coupon.free_trial?
+                if coupon.present?
+                  Rails.logger.info ">>>> [2.0] Inside Concern::Subscription | coupon Found : #{coupon}"
                   # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
                   stripe_coupon_check = Stripe::Coupon.retrieve(coupon.code)
                   if stripe_coupon_check
@@ -115,9 +133,9 @@ module Koudoku::Subscription
                       object: 'discount',
                       coupon: stripe_coupon_check
                     }
-                    Rails.logger.info ">>>> Inside Concern::Subscription | coupon Found : #{coupon} | \n customer_attributes : #{customer_attributes}"
+                    Rails.logger.info ">>>> [2.1] Inside Concern::Subscription | coupon Found : #{coupon} | \n customer_attributes : #{customer_attributes}"
                   else
-                    Rails.logger.info ">>>> Inside Concern::Subscription | coupon NOT Found :("
+                    Rails.logger.info ">>>> [2.2] Inside Concern::Subscription | coupon NOT Found :("
                   end
                 end
               end
