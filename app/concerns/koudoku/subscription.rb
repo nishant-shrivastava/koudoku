@@ -64,10 +64,11 @@ module Koudoku::Subscription
                     # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
                     stripe_coupon_check = Stripe::Coupon.retrieve(coupon.code)
                     if stripe_coupon_check
-                      subscription.discount = {
-                        object: 'discount',
-                        coupon: stripe_coupon_check
-                      }
+                      # subscription.discount = {
+                      #   object: 'discount',
+                      #   coupon: stripe_coupon_check
+                      # }
+                      subscription.coupon = stripe_coupon_check['id']
                       Rails.logger.info ">>>> [1.1] Inside Concern::Subscription | coupon Found : #{coupon} | \n subscription : #{subscription}"
                     else
                       Rails.logger.info ">>>> [1.2] Inside Concern::Subscription | coupon NOT Found :("
@@ -139,10 +140,11 @@ module Koudoku::Subscription
                   # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
                   stripe_coupon_check = Stripe::Coupon.retrieve(coupon.code)
                   if stripe_coupon_check
-                    subscription_attr[:discount] = {
-                      object: 'discount',
-                      coupon: stripe_coupon_check
-                    }
+                    # subscription_attr[:discount] = {
+                    #   object: 'discount',
+                    #   coupon: stripe_coupon_check
+                    # }
+                    subscription_attr[:coupon] = stripe_coupon_check['id']
                     Rails.logger.info ">>>> [2.1] Inside Concern::Subscription | coupon Found : #{coupon} | \n subscription_attr : #{subscription_attr}"
                   else
                     Rails.logger.info ">>>> [2.2] Inside Concern::Subscription | coupon NOT Found :("
