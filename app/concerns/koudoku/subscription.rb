@@ -185,11 +185,15 @@ module Koudoku::Subscription
 
         Rails.logger.info "\n\n >>> 2. Inside Concern::Subscription | self.credit_card_token.present? : #{self.credit_card_token.present?}"
         prepare_for_card_update
-        # fetch the customer.
-        customer = Stripe::Customer.retrieve(self.stripe_id)
-        Rails.logger.info "\n\n >>>> Inside self.credit_card_token.present? | customer (from Stripe) : #{customer}"
-        customer.card = self.credit_card_token
-        customer.save
+        begin
+          # fetch the customer.
+          customer = Stripe::Customer.retrieve(self.stripe_id)
+          Rails.logger.info "\n\n >>>> Inside self.credit_card_token.present? | customer (from Stripe) : #{customer}"
+          customer.card = self.credit_card_token
+          customer.save
+        rescue Exception => e
+          Rails.logger.fatal "\n[Stripe Exception]#{e.message}\n #{e.backtrace.join('\n')}"
+        end
 
         # update the last four based on this new card.
         self.last_four = customer.sources.retrieve(customer.default_source).last4
