@@ -186,8 +186,10 @@ module Koudoku::Subscription
         Rails.logger.info "\n\n >>> 2. Inside Concern::Subscription | self.credit_card_token.present? : #{self.credit_card_token.present?}"
         prepare_for_card_update
         begin
-          # fetch the customer.
-          customer = Stripe::Customer.retrieve(self.stripe_id)
+          if customer.present && !customer.id
+            # fetch the customer.
+            customer = Stripe::Customer.retrieve(self.stripe_id)
+          end
           Rails.logger.info "\n\n >>>> Inside self.credit_card_token.present? | customer (from Stripe) : #{customer}"
           customer.card = self.credit_card_token
           customer.save
