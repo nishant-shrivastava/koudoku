@@ -182,16 +182,18 @@ module Koudoku::Subscription
         # if they're updating their credit card details.
         # @TODO : Also check whether the User has the same card details as before.
         # Check with stripe, rather than in DB.
-
         Rails.logger.info "\n\n >>> 2. Inside Concern::Subscription | self.credit_card_token.present? : #{self.credit_card_token.present?}"
+
         prepare_for_card_update
         begin
           if customer.present && !customer.id
+          Rails.logger.info "\n\n >>>> [BEFORE]Inside self.credit_card_token.present? | customer (from Stripe) : #{customer}"
             # fetch the customer.
             customer = Stripe::Customer.retrieve(self.stripe_id)
           end
-          Rails.logger.info "\n\n >>>> Inside self.credit_card_token.present? | customer (from Stripe) : #{customer}"
           customer.card = self.credit_card_token
+          Rails.logger.info "\n\n >>>> [AFTER]Inside self.credit_card_token.present? | customer (from Stripe) : #{customer}"
+
           customer.save
         rescue Exception => e
           Rails.logger.fatal "\n[Stripe Exception]#{e.message}\n #{e.backtrace.join('\n')}"
