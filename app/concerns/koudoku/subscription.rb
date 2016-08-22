@@ -127,6 +127,10 @@ module Koudoku::Subscription
                 Rails.logger.info ">>>> Inside Concern::Subscription | credit_card_token : #{credit_card_token}"
               end
 
+              if plan.stripe_id == Plan.starter_monthly.stripe_id
+                customer_attributes.merge!({trial_end: (Time.now + 1.month).to_i})
+                Rails.logger.info "\n\n >>> 1.1.1.1.0 Inside Concern::Subscription | customer_attributes : #{customer_attributes}"
+              end
               # create a customer at that package level.
               customer = Stripe::Customer.create(customer_attributes)
 
@@ -140,10 +144,6 @@ module Koudoku::Subscription
                   # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
                   stripe_coupon_check = Stripe::Coupon.retrieve(coupon.code)
                   if stripe_coupon_check
-                    # subscription_attr[:discount] = {
-                    #   object: 'discount',
-                    #   coupon: stripe_coupon_check
-                    # }
                     subscription_attr[:coupon] = stripe_coupon_check['id']
                     Rails.logger.info ">>>> [2.1] Inside Concern::Subscription | coupon Found : #{coupon} | \n subscription_attr : #{subscription_attr}"
                   else
