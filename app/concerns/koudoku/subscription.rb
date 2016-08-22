@@ -128,7 +128,7 @@ module Koudoku::Subscription
               end
 
               if plan.stripe_id == Plan.starter_monthly.stripe_id
-                customer_attributes.merge!({trial_end: (Time.now + 1.month).to_i})
+                customer_attributes.merge!({trial_end: (Time.now + 1.days).to_i})
                 Rails.logger.info "\n\n >>> 1.1.1.1.0 Inside Concern::Subscription | customer_attributes : #{customer_attributes}"
               end
               # create a customer at that package level.
