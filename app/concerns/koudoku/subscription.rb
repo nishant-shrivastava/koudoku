@@ -92,15 +92,7 @@ module Koudoku::Subscription
             # Remove the current pricing.
             self.current_price = nil
             # delete the subscription.
-            # Commented on 6 April'16 for resolving API UPDATE issues.
-            # customer.cancel_subscription
-            if customer.subscriptions && customer.subscriptions.first
-              subscription = customer.subscriptions.first
-              subscription.plan = ::Plan.basic.stripe_id
-              if subscription.save
-                Rails.logger.info "\n\n >>>> 1.0.1.0.2 Inside Plan Cancellation | Subscription switched back to Basic"
-              end
-            end
+            customer.cancel_subscription
             finalize_cancelation!
           end
         # when customer DOES NOT exist in stripe ..
@@ -128,7 +120,7 @@ module Koudoku::Subscription
               end
 
               if plan.stripe_id == Plan.starter_monthly.stripe_id
-                customer_attributes.merge!({trial_end: (Time.now + 1.days).to_i})
+                customer_attributes.merge!({trial_end: (Time.now + 1.month).to_i})
                 Rails.logger.info "\n\n >>> 1.1.1.1.0 Inside Concern::Subscription | customer_attributes : #{customer_attributes}"
               end
               # create a customer at that package level.
