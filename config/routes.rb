@@ -8,7 +8,6 @@ Koudoku::Engine.routes.draw do
       end
     end
   end
-    
-  mount StripeEvent::Engine => '/webhooks'
-  
+
+  # mount StripeEvent::Engine => '/webhooks'
 end
