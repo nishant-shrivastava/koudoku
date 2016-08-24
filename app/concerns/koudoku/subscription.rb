@@ -85,10 +85,16 @@ module Koudoku::Subscription
           else
             Rails.logger.info "\n\n >>> 1.0.1.0 Inside Concern::Subscription | Inside Else | Customer.cancel_subscription"
             prepare_for_cancelation
-            # Remove the current pricing.
-            self.current_price = nil
-            # delete the subscription.
-            customer.cancel_subscription
+
+            if customer.subscriptions.first.plan.interval == 'year'
+              # Remove the current pricing.
+              self.current_price = nil
+              # delete the subscription.
+              customer.cancel_subscription
+            else
+              customer.subscriptions.first.delete(at_period_end: true)
+            end
+
             finalize_cancelation!
           end
         # when customer DOES NOT exist in stripe ..
