@@ -196,6 +196,19 @@ module Koudoku::Subscription
         # update the last four based on this new card.
         self.last_four = customer.sources.retrieve(customer.default_source).last4
         finalize_card_update!
+      elsif cancelling_subscription?
+        Rails.logger.info "\n\n >>> 3.0 Inside Concern::Subscription | Inside ElsIf cancelling_subscription? : #{cancelling_subscription?} | Customer.cancel_subscription"
+
+        prepare_for_cancelation
+        if customer.subscriptions.first.plan.interval == 'year'
+          # Remove the current pricing.
+          self.current_price = nil
+          # delete the subscription.
+          customer.cancel_subscription
+        else
+          customer.subscriptions.first.delete(at_period_end: true)
+        end
+        finalize_cancelation!
       end
     end
   end
@@ -250,6 +263,10 @@ module Koudoku::Subscription
 
   def changing_plans?
     plan_id_changed?
+  end
+
+  def cancelling_subscription?
+    plan_id_changed? || cancel_at_period_end
   end
 
   def downgrading?
