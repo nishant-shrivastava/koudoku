@@ -196,7 +196,8 @@ module Koudoku::Subscription
         # update the last four based on this new card.
         self.last_four = customer.sources.retrieve(customer.default_source).last4
         finalize_card_update!
-      elsif cancelling_subscription?
+      elsif cancelling_subscription? && stripe_id.present?
+        customer = Stripe::Customer.retrieve(self.stripe_id)
         Rails.logger.info "\n\n >>> 3.0 Inside Concern::Subscription | Inside ElsIf cancelling_subscription? : #{cancelling_subscription?} | Customer.cancel_subscription"
 
         prepare_for_cancelation
