@@ -203,6 +203,7 @@ module Koudoku::Subscription
               end
             end
           end
+          customer_attributes = {}
           customer_attributes[:coupon] = @coupon_code if @coupon_code
 
           if subscription_attr && !subscription_attr.blank?
