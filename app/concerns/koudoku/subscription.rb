@@ -187,8 +187,30 @@ module Koudoku::Subscription
           end
           customer.card = self.credit_card_token
           Rails.logger.info "\n\n >>>> [2.AFTER]Inside self.credit_card_token.present? | customer (from Stripe) : #{customer}"
-
           customer.save
+
+           # If the class we're being included in supports coupons ..
+              if respond_to? :coupon
+                Rails.logger.info ">>>> [2.0] Inside Concern::Subscription | respond_to? :coupon : #{respond_to? :coupon}"
+                if coupon.present?
+                  Rails.logger.info ">>>> [2.0] Inside Concern::Subscription | coupon Found : #{coupon}"
+                  # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
+                  stripe_coupon_check = Stripe::Coupon.retrieve(coupon.code)
+                  if stripe_coupon_check
+                    subscription_attr[:coupon] = stripe_coupon_check['id']
+                    Rails.logger.info ">>>> [2.1] Inside Concern::Subscription | coupon Found : #{coupon} | \n subscription_attr : #{subscription_attr}"
+                  else
+                    Rails.logger.info ">>>> [2.2] Inside Concern::Subscription | coupon NOT Found :("
+                  end
+                end
+              end
+              customer_attributes[:coupon] = @coupon_code if @coupon_code
+
+              if subscription_attr && !subscription_attr.blank?
+                customer.update_subscription(subscription_attr.merge({:plan => self.plan.stripe_id, :prorate => Koudoku.prorate}))
+              else
+                customer.update_subscription(:plan => self.plan.stripe_id, :prorate => Koudoku.prorate)
+              end
         rescue Exception => e
           Rails.logger.fatal "\n[2.Stripe Exception]#{e.message}\n #{e.backtrace.join('\n')}"
         end
