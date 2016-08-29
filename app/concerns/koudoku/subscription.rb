@@ -58,16 +58,16 @@ module Koudoku::Subscription
               subscription = customer.subscriptions.first
               if upgrading?
                 if respond_to? :coupon
-                  Rails.logger.info ">>>> [1.0] Inside Concern::Subscription | respond_to? :coupon : #{respond_to? :coupon}"
+                  Rails.logger.info ">>>> [1.0.2.1] Inside Concern::Subscription | respond_to? :coupon : #{respond_to? :coupon}"
                   if coupon.present?
-                    Rails.logger.info ">>>> [1.0] Inside Concern::Subscription | coupon Found : #{coupon.inspect}"
+                    Rails.logger.info ">>>> [1.0.2.2] Inside Concern::Subscription | coupon Found : #{coupon.inspect}"
                     # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
                     stripe_coupon_check = Stripe::Coupon.retrieve(coupon.code)
                     if stripe_coupon_check
                       subscription.coupon = stripe_coupon_check['id']
-                      Rails.logger.info ">>>> [1.1] Inside Concern::Subscription | coupon Found : #{coupon} | \n subscription : #{subscription}"
+                      Rails.logger.info ">>>> [1.0.2.3] Inside Concern::Subscription | coupon Found : #{coupon} | \n subscription : #{subscription}"
                     else
-                      Rails.logger.info ">>>> [1.2] Inside Concern::Subscription | coupon NOT Found :("
+                      Rails.logger.info ">>>> [1.0.2.4] Inside Concern::Subscription | coupon NOT Found :("
                     end
                   end
                 end
@@ -121,31 +121,30 @@ module Koudoku::Subscription
                 Rails.logger.info ">>>> Inside Concern::Subscription | credit_card_token : #{credit_card_token}"
               end
 
-              # if plan.stripe_id == Plan.starter_monthly.stripe_id
-              #   customer_attributes.merge!({trial_end: (Time.now + 1.month).to_i})
-              #   Rails.logger.info "\n\n >>> 1.1.1.1.0 Inside Concern::Subscription | customer_attributes : #{customer_attributes}"
-              # end
               # create a customer at that package level.
               customer = Stripe::Customer.create(customer_attributes)
 
               finalize_new_customer!(customer.id, plan.price)
 
               # If the class we're being included in supports coupons ..
-              if respond_to? :coupon
-                Rails.logger.info ">>>> [2.0] Inside Concern::Subscription | respond_to? :coupon : #{respond_to? :coupon}"
-                if coupon.present?
-                  Rails.logger.info ">>>> [2.0] Inside Concern::Subscription | coupon Found : #{coupon}"
-                  # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
-                  stripe_coupon_check = Stripe::Coupon.retrieve(coupon.code)
-                  if stripe_coupon_check
-                    subscription_attr[:coupon] = stripe_coupon_check['id']
-                    Rails.logger.info ">>>> [2.1] Inside Concern::Subscription | coupon Found : #{coupon} | \n subscription_attr : #{subscription_attr}"
-                  else
-                    Rails.logger.info ">>>> [2.2] Inside Concern::Subscription | coupon NOT Found :("
+              if upgrading?
+                if respond_to? :coupon
+                  Rails.logger.info ">>>> [1.1.1.2.0] Inside Concern::Subscription | respond_to? :coupon : #{respond_to? :coupon}"
+                  if coupon.present?
+                    Rails.logger.info ">>>> [1.1.1.2.0] Inside Concern::Subscription | coupon Found : #{coupon}"
+                    # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
+                    stripe_coupon_check = Stripe::Coupon.retrieve(coupon.code)
+                    if stripe_coupon_check
+                      subscription_attr = []
+                      subscription_attr[:coupon] = stripe_coupon_check['id']
+                      Rails.logger.info ">>>> [1.1.1.2.1] Inside Concern::Subscription | coupon Found : #{coupon} | \n subscription_attr : #{subscription_attr}"
+                    else
+                      Rails.logger.info ">>>> [1.1.1.2.2] Inside Concern::Subscription | coupon NOT Found :("
+                    end
                   end
                 end
+                customer_attributes[:coupon] = @coupon_code if @coupon_code
               end
-              customer_attributes[:coupon] = @coupon_code if @coupon_code
 
               if subscription_attr && !subscription_attr.blank?
                 customer.update_subscription(subscription_attr.merge({:plan => self.plan.stripe_id, :prorate => Koudoku.prorate}))
@@ -189,28 +188,30 @@ module Koudoku::Subscription
           Rails.logger.info "\n\n >>>> [2.AFTER]Inside self.credit_card_token.present? | customer (from Stripe) : #{customer}"
           customer.save
 
-           # If the class we're being included in supports coupons ..
-              if respond_to? :coupon
-                Rails.logger.info ">>>> [2.0] Inside Concern::Subscription | respond_to? :coupon : #{respond_to? :coupon}"
-                if coupon.present?
-                  Rails.logger.info ">>>> [2.0] Inside Concern::Subscription | coupon Found : #{coupon}"
-                  # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
-                  stripe_coupon_check = Stripe::Coupon.retrieve(coupon.code)
-                  if stripe_coupon_check
-                    subscription_attr[:coupon] = stripe_coupon_check['id']
-                    Rails.logger.info ">>>> [2.1] Inside Concern::Subscription | coupon Found : #{coupon} | \n subscription_attr : #{subscription_attr}"
-                  else
-                    Rails.logger.info ">>>> [2.2] Inside Concern::Subscription | coupon NOT Found :("
-                  end
+          # If the class we're being included in supports coupons ..
+          if upgrading?
+            if respond_to? :coupon
+              Rails.logger.info ">>>> [2.0] Inside Concern::Subscription | respond_to? :coupon : #{respond_to? :coupon}"
+              if coupon.present?
+                Rails.logger.info ">>>> [2.0] Inside Concern::Subscription | coupon Found : #{coupon.inspect}"
+                stripe_coupon_check = Stripe::Coupon.retrieve(coupon.code)
+                subscription_attr = []
+                if stripe_coupon_check
+                  subscription_attr[:coupon] = stripe_coupon_check['id']
+                  Rails.logger.info ">>>> [2.1] Inside Concern::Subscription | coupon Found : #{coupon.inspect} | \n subscription_attr : #{subscription_attr}"
+                else
+                  Rails.logger.info ">>>> [2.2] Inside Concern::Subscription | coupon NOT Found :("
                 end
               end
-              customer_attributes[:coupon] = @coupon_code if @coupon_code
+            end
+            customer_attributes[:coupon] = @coupon_code if @coupon_code
+          end
 
-              if subscription_attr && !subscription_attr.blank?
-                customer.update_subscription(subscription_attr.merge({:plan => self.plan.stripe_id, :prorate => Koudoku.prorate}))
-              else
-                customer.update_subscription(:plan => self.plan.stripe_id, :prorate => Koudoku.prorate)
-              end
+          if subscription_attr && !subscription_attr.blank?
+            customer.update_subscription(subscription_attr.merge({:plan => self.plan.stripe_id, :prorate => Koudoku.prorate}))
+          else
+            customer.update_subscription(:plan => self.plan.stripe_id, :prorate => Koudoku.prorate)
+          end
         rescue Exception => e
           Rails.logger.fatal "\n[2.Stripe Exception]#{e.message}\n #{e.backtrace.join('\n')}"
         end
