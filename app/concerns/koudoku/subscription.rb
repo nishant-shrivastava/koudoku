@@ -135,7 +135,7 @@ module Koudoku::Subscription
                     # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
                     stripe_coupon_check = Stripe::Coupon.retrieve(coupon.code)
                     if stripe_coupon_check
-                      subscription_attr = []
+                      subscription_attr = {}
                       subscription_attr[:coupon] = stripe_coupon_check['id']
                       Rails.logger.info ">>>> [1.1.1.2.1] Inside Concern::Subscription | coupon Found : #{coupon} | \n subscription_attr : #{subscription_attr}"
                     else
@@ -194,7 +194,7 @@ module Koudoku::Subscription
             if coupon.present?
               Rails.logger.info ">>>> [2.0] Inside Concern::Subscription | coupon Found : #{coupon.inspect}"
               stripe_coupon_check = Stripe::Coupon.retrieve(coupon.code)
-              subscription_attr = []
+              subscription_attr = {}
               if stripe_coupon_check
                 subscription_attr[:coupon] = stripe_coupon_check['id']
                 Rails.logger.info ">>>> [2.1] Inside Concern::Subscription | coupon Found : #{coupon.inspect} | \n subscription_attr : #{subscription_attr}"
