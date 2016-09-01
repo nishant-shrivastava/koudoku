@@ -76,7 +76,7 @@ module Koudoku::Subscription
               subscription.plan = self.plan.stripe_id
               if subscription.save
                 # Remove CouponCode from subscription
-                self.update_attributes({coupon_code: nil})
+                self.update_attribute(coupon_code: nil)
                 Rails.logger.info "\n\n >>>> 1.0.1.0.1 Inside Plan Upgrade/Downgrade | Subscription switched to : #{subscription}"
               end
             end
@@ -144,7 +144,7 @@ module Koudoku::Subscription
                       Rails.logger.info ">>>> [1.1.1.2.2] Inside Concern::Subscription | coupon NOT Found :("
                     end
                     customer_attributes[:coupon] = self.coupon_code if self.coupon_code
-                    self.update_attributes({coupon_code: nil})
+                    self.update_attribute(coupon_code: nil)
                   end
                 end
               end
@@ -208,7 +208,7 @@ module Koudoku::Subscription
             end
             customer_attributes = {}
             customer_attributes[:coupon] = self.coupon_code
-            self.update_attributes({coupon_code: nil})
+            self.update_attribute(coupon_code: nil)
           end
 
           if subscription_attr && !subscription_attr.blank?
