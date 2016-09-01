@@ -59,7 +59,7 @@ module Koudoku::Subscription
               if upgrading?
                 Rails.logger.info ">>>> [1.0.2.1] Inside Concern::Subscription | Upgrading : #{upgrading?} | \n self : #{self.inspect} | \n self.coupon_code : #{self.coupon_code}"
                 if self.coupon_code.present?
-                  Rails.logger.info ">>>> [1.0.2.2] Inside Concern::Subscription | coupon Found : #{coupon.inspect}"
+                  Rails.logger.info ">>>> [1.0.2.2] Inside Concern::Subscription | coupon Found : #{self.coupon_code}"
                   # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
                   stripe_coupon_check = Stripe::Coupon.retrieve(self.coupon_code)
                   if stripe_coupon_check
