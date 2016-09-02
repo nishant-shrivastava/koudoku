@@ -77,6 +77,26 @@ module Koudoku::Subscription
                 # Remove CouponCode from subscription
                 Rails.logger.info "\n\n >>>> 1.0.1.0.1 Inside Plan Upgrade/Downgrade | Subscription switched to : #{subscription}"
               end
+            else
+              # Re-assigning Subscription after Cancellation
+              subscription_attr = {}
+              if self.coupon_code.present?
+                Rails.logger.info ">>>> [1.0.3.1] Inside Concern::Subscription | coupon Found : #{self.coupon_code}"
+                # customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
+                stripe_coupon_check = Stripe::Coupon.retrieve(self.coupon_code)
+                if stripe_coupon_check
+                  subscription_attr[:coupon] = stripe_coupon_check['id']
+                  Rails.logger.info ">>>> [1.0.3.2] Inside Concern::Subscription | coupon Found : #{stripe_coupon_check} | \n subscription : #{subscription}"
+                else
+                  Rails.logger.info ">>>> [1.0.3.3] Inside Concern::Subscription | coupon NOT Found :("
+                end
+                self.update_column(:coupon_code, nil)
+              end
+              if subscription_attr && !subscription_attr.blank?
+                customer.update_subscription(subscription_attr.merge({:plan => self.plan.stripe_id, :prorate => Koudoku.prorate}))
+              else
+                customer.update_subscription(:plan => self.plan.stripe_id, :prorate => Koudoku.prorate)
+              end
             end
 
             finalize_downgrade! if downgrading?
