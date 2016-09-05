@@ -90,7 +90,11 @@ module Koudoku::Subscription
                 else
                   Rails.logger.info ">>>> [1.0.3.3] Inside Concern::Subscription | coupon NOT Found :("
                 end
-                self.update_column(:coupon_code, nil)
+                if self.cancel_at_period_end
+                  self.update_columns({coupon_code: nil, cancel_at_period_end: false})
+                else
+                  self.update_column(:coupon_code, nil)
+                end
               end
               if subscription_attr && !subscription_attr.blank?
                 customer.update_subscription(subscription_attr.merge({:plan => self.plan.stripe_id, :prorate => Koudoku.prorate}))
@@ -181,12 +185,6 @@ module Koudoku::Subscription
 
             finalize_new_subscription!
             finalize_upgrade!
-          else
-            Rails.logger.info "\n\n >>> 1.1.0 Inside Concern::Subscription | Inside Else | Setting Plan to Basic, if nothing is present."
-            # This should never happen.
-            self.plan_id = ::Plan.basic.id
-            # Remove any plan pricing.
-            self.current_price = ::Plan.basic.price
           end
         end
         finalize_plan_change!
