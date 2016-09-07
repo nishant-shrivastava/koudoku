@@ -254,7 +254,7 @@ module Koudoku::Subscription
           # delete the subscription.
           customer.cancel_subscription
         else
-          ::SubscriptionsMailer.delay.cancelling_monthy_subscription(self.organization.owner, self)
+          ::SubscriptionsMailer.delay.cancelling_monthly_subscription(self.organization.owner, self)
           ::SubscriptionsMailer.delay.admin_mail_for_cancellation(self.organization.owner, self, 'monthly')
           customer.subscriptions.first.delete(at_period_end: true)
         end
