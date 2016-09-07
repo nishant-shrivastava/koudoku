@@ -52,8 +52,6 @@ module Koudoku::Subscription
             prepare_for_upgrade if upgrading?
 
             # update the package level with stripe.
-            # Commented on 6 April'16 for resolving API UPDATE issues.
-            # customer.update_subscription(:plan => self.plan.stripe_id, :prorate => Koudoku.prorate)
             if customer.subscriptions && customer.subscriptions.first
               subscription = customer.subscriptions.first
               if upgrading?
@@ -105,8 +103,8 @@ module Koudoku::Subscription
 
             finalize_downgrade! if downgrading?
             finalize_upgrade! if upgrading?
-          # if no plan has been selected.
           else
+            # if no plan has been selected.
             Rails.logger.info "\n\n >>> 1.0.1.0 Inside Concern::Subscription | Inside Else | Customer.cancel_subscription"
             prepare_for_cancelation
 
@@ -240,11 +238,24 @@ module Koudoku::Subscription
 
         prepare_for_cancelation
         if customer.subscriptions.first.plan.interval == 'year'
+          subscription = customer.subscriptions.first
           # Remove the current pricing.
           self.current_price = nil
+          # Set up the Plan details hash and pass for SubscriptionMailer
+          plan_description = {
+            current_plan_name: subscription['plan']['name'],
+            current_plan_interval: subscription['plan']['interval'],
+            current_plan_price: subscription['plan']['amount'],
+            current_plan_days_used: (Date.parse(Time.now.to_s) - Date.parse(Time.at(subscription['current_period_start'])).to_s)).round,
+            current_plan_days_remaining: (Date.parse(Time.at(subscription['current_period_end'])).to_s) - Date.parse(Time.now.to_s)).round
+          }
+          ::SubscriptionsMailer.delay.cancelling_yearly_subscription(self.organization.owner, self, plan_description)
+          ::SubscriptionsMailer.delay.admin_mail_for_cancellation(self.organization.owner, self, 'yearly')
           # delete the subscription.
           customer.cancel_subscription
         else
+          ::SubscriptionsMailer.delay.cancelling_monthy_subscription(self.organization.owner, self)
+          ::SubscriptionsMailer.delay.admin_mail_for_cancellation(self.organization.owner, self, 'monthly')
           customer.subscriptions.first.delete(at_period_end: true)
         end
         finalize_cancelation!
