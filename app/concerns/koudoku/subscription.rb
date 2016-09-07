@@ -246,8 +246,8 @@ module Koudoku::Subscription
             current_plan_name: subscription['plan']['name'],
             current_plan_interval: subscription['plan']['interval'],
             current_plan_price: subscription['plan']['amount'],
-            current_plan_days_used: (Date.parse(Time.now.to_s) - Date.parse(Time.at(subscription['current_period_start'])).to_s)).round,
-            current_plan_days_remaining: (Date.parse(Time.at(subscription['current_period_end'])).to_s) - Date.parse(Time.now.to_s)).round
+            current_plan_days_used: (Date.parse(Time.now.to_s) - Date.parse(Time.at(subscription['current_period_start']).to_s)).round,
+            current_plan_days_remaining: (Date.parse(Time.at(subscription['current_period_end']).to_s) - Date.parse(Time.now.to_s)).round
           }
           ::SubscriptionsMailer.delay.cancelling_yearly_subscription(self.organization.owner, self, plan_description)
           ::SubscriptionsMailer.delay.admin_mail_for_cancellation(self.organization.owner, self, 'yearly')
